@@ -27,11 +27,41 @@ DEBUG = True
 
 ALLOWED_HOSTS = []
 
+CORS_ORIGIN_WHITELIST = (
+    'http//:localhost:4200',
+    'http//:localhost:4200/',
+    'http//:localhost:4200/newbook',
+    'http//:localhost:4200/newbook/',
+    'localhost:4200', 
+    'localhost:4200/',
+    'localhost:4200/newbook',
+    'localhost:4200/newbook/', 
+)
 
+CORS_ALLOW_METHODS = (
+    'POST', 
+    'DELETE',
+)
+
+CORS_ALLOW_HEADERS = (
+    'accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'dnt',
+    'origin',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
+)
 # Application definition
+CORS_ALLOW_ALL = True
+
+CSRF_COOKIE_SECURE = False
 
 INSTALLED_APPS = [
     'bookupload.apps.BookuploadConfig',
+    'corsheaders',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -41,8 +71,11 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
+    'corsheaders.middleware.CorsPostCsrfMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'django.middleware.common.BrokenLinkEmailsMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -76,8 +109,12 @@ WSGI_APPLICATION = 'canvasAPI.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
+        'ENGINE': 'django.db.backends.postgresql_psycopg2',
+        'NAME': 'myowndb',
+        'USER': 'rse',
+        'PASSWORD': '24R$&08ubuntu95',
+        'HOST': 'localhost',
+        'PORT': 5432,
     }
 }
 

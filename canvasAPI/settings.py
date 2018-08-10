@@ -59,8 +59,14 @@ CORS_ALLOW_ALL = True
 
 CSRF_COOKIE_SECURE = False
 
+STATIC_URL = '/static/'
+STATICFILES_DIRS = [
+    '/home/rafael/MyLibrary/Angular[_dir_]/imgs/',
+]
+
 INSTALLED_APPS = [
     'bookupload.apps.BookuploadConfig',
+    'book.apps.BookConfig',
     'corsheaders',
     'django.contrib.admin',
     'django.contrib.auth',

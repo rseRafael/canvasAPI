@@ -4,28 +4,29 @@ from os import mkdir
 from pdf2image import convert_from_path
 import os
 from django.views.decorators.csrf import csrf_exempt
-from .models import Book, Object, Stack
+from .models import Book, Object, Page
+from PyPDF2 import PdfFileReader
 
 # Create your views here.
 @csrf_exempt
 def uploadBookMain(request):
     result = uploadBook(request)
     if result[0] == True:
-        try:
-            aFile = request.FILES.get('book')
-            book = Book(NAME = aFile.name, SIZE=aFile.size, PATH = result[1])
-            stack = Stack(BOOK_id = book.id, )
-            print(dir(aFile))
+        print("\t\t imagePath = {0}".format(result[1]))
+        try: 
+            result = uploadBookDataBase(request, result[1], result[2])
         except Exception as err:
-            print('erro:')
+            print("erro na execucao de uploadBookDataBase")
             print(err)
-        response = JsonResponse({'result': True, 'post-operation': "success"})
-        response['Access-Control-Allow-Origin'] = "*"
-        return response
+        if result[0] == True:
+            print("deu certo")
+            response = JsonResponse({'result': True, 'post-operation': "success"})
+            response['Access-Control-Allow-Origin'] = "*"
+            return response
     else:
         print(result[1])
         print(result[2])
-        response = JsonResponse({ 'result': result[0], 'Error': result[1], 'errorMsg': result[3], 'post-operation': 'fail' })
+        response = JsonResponse({ 'result': result[0], 'Error': result[1].__str__(), 'errorMsg': result[2], 'post-operation': 'fail' })
         response['Access-Control-Allow-Origin'] = "*"
         return response
 
@@ -73,7 +74,11 @@ def uploadBook(request):
                                     result = convertPDF(imgFolderPath, pdfPath)
                                     if result[0] == True:
                                         print("11 - we converted the pdf file at {0} in images".format(imgFolderPath))
-                                        return [True, imgFolderPath]
+                                        f = open(file=pdfPath,mode="rb")
+                                        pdf = PdfFileReader(f)
+                                        pagesNumber = pdf.getNumPages()
+                                        f.close()
+                                        return [True, imgFolderPath, pagesNumber]
                         return result
                     except Exception as err:
                         return [False, err, "An error has occurred at uploadBook function"]
@@ -138,26 +143,26 @@ def convertPDF(imgFolderPath = None, pdfPath = None):
     if imgFolderPath == None or pdfPath == None or type(imgFolderPath) != str or type(pdfPath) != str:
         return [False, None, "imgFolderPath and pdfPath must be of type str"]
     try:
-        inicio = 0
-        fim  = 100
+        inicio = 1
+        fim  = 30
         while True:
+            print("\t\tstarting to convert pdf file to imgs from {0} to {1}".format(inicio, fim))
             lista = convert_from_path(pdf_path = pdfPath, output_folder = imgFolderPath, first_page = inicio, last_page = fim, fmt="jpg")
-            
             if len(lista) == 0:
                 print("finished converting the pdf file")
                 break
             else:
-                renameImgs(imgFolderPath, inicio)
+                renameImgs(imgFolderPath, inicio, pdfPath)
                 print("\t\tconverted pdf to img from page: {0} to page {1}".format(inicio, fim))
                 inicio = fim + 1
-                fim = inicio + 50
+                fim = inicio + 30
         return [True,]
     except Exception as err:
         errMsg = "An error has occurred while converting a pdf({0}) to images files".format(pdfPath)
         print(errMsg)
         return [False, err,  errMsg]
 
-def renameImgs(imgFolderPath = None, inicio = None):
+def renameImgs(imgFolderPath = None, inicio = None, pdfPath = None):
     if imgFolderPath == None or type(imgFolderPath) != str:
         return [False, None, "imgFolderPath must be of string type"]
     else:
@@ -166,13 +171,28 @@ def renameImgs(imgFolderPath = None, inicio = None):
             lista = os.listdir(imgFolderPath)
             lista.sort()
             #Nessa parte pegamos a quantidade de elementos da lista, que é um número, transformamos em uma string e pegamos a quantidade de caracteres.
-            length = len(str(len(lista)))
-            for img in lista:
-                if img.find("-") != -1:
-                    newname = formatNumber(index, length)
-                    os.rename(src = imgFolderPath + img, dst = imgFolderPath + "{0}.jpg".format(newname))
-                    index += 1
-            return [True]
+            length = None
+            try:
+                f = open(file = pdfPath, mode =  "rb")
+                pdf  = PdfFileReader(f)
+                length = pdf.getNumPages()
+            except Exception as err:
+                return [False, err, "Erro while trying to get the number of pages of the pdf file"]
+            if length != None:
+                for img in lista:
+                    if img.find("-") != -1:
+                        arr = img.split("-")
+                        name = None
+                        for prop in arr:
+                            if prop.find(".jpg") != -1:
+                                name = prop
+                        if name != None:
+                            number = name.split(".")[0]
+                            os.rename(src = imgFolderPath + img, dst = imgFolderPath + "{0}.jpg".format(number))
+                        index += 1
+                return [True]
+            else:
+                return [False, None, "length is equal to None"]
         except Exception as err:
             return [False, err, "An error has occurred while trying to rename the imgs at {0}".format()]
 
@@ -189,4 +209,22 @@ def formatNumber(number=None, length=None):
             return n
         except Exception as err:
             return [False, None, "An error has occurred while formating a number: {0}".format(number)]
-                
+
+def uploadBookDataBase(request, imgPath, pgsNumber):
+    try:
+        aFile = request.FILES.get('book')
+        capa = formatNumber(1, len(str(len(os.listdir(imgPath))))) + ".jpg"
+        book = Book(NAME = aFile.name, SIZE = aFile.size, imgsPATH = imgPath, capaPATH = capa, PAGES = pgsNumber)
+        book.save()
+        print("1 - criamos o book no banco de dados with the imagePath = {0} ".format(imgPath))
+        imgList = os.listdir(imgPath)
+        for img in imgList: 
+            number = int(img.replace(".jpg", ""))
+            p = Page(BOOK_id = book.id,  NUMERO = number, PAGINA = img) 
+            p.save()
+            print("Salvamos a pagina {0} do livro de id {1}".format(img, book.id))
+            print("Salvamos a stack da pagina {0} do livro {1}".format(p.id, book.id))
+        return [True]
+    except Exception as err:
+        print("Deu erro")
+        return [False, err, "Deu erro na uploadBookDataBase function"]

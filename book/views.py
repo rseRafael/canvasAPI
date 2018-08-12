@@ -3,6 +3,7 @@ from bookupload.models import Book, Page, Object
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 import json
+import base64
 
 def getbooks(request):
     #if request.META['HTTP_REFERER'].find("http://localhost:4200") != -1:
@@ -29,11 +30,21 @@ def getbooks(request):
 @csrf_exempt
 def setStack(request):
     if request.method == "POST":
-        print("Data posted: ", request.POST)
+        print("imgPATH: ", request.POST['imgPATH'])
+        print(request.FILES)
         imgPath = request.POST['imgPATH']
         arr = imgPath.split("/")
         img = arr.pop()
         book_id = int(arr.pop().replace("book", ""))
+        books = Book.objects.filter(id = book_id)
+        if len(books) == 1:
+            book = books[0]
+            path = book.mainPATH + "editedImgs/"
+            f = open(file=path + img.replace(".jpg", ".png"), mode="wb")
+            IMG = request.POST['image'].encode()
+            f.write(base64.decodebytes(IMG))
+            f.close()
+            print("Saved the {0} img at {1} path".format(img,path))
         print("image: ", img, "BOOK_id: ", book_id)
         pg = Page.objects.get(BOOK_id = book_id, PAGINA = img)
         print("PAGE_id: ", pg.id, "BOOK_id", book_id)

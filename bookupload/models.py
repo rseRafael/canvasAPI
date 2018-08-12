@@ -6,6 +6,7 @@ class Book(models.Model):
     imgsPATH = models.FilePathField(blank=True, null=True)
     capaPATH = models.FilePathField(blank=True, null=True)
     PAGES = models.BigIntegerField(blank=True, null=True)
+    mainPATH = models.FilePathField(blank=True, null=True)
     
 class Page(models.Model):
     BOOK = models.ForeignKey('Book', on_delete=None, blank=True, null=True)

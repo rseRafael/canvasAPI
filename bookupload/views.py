@@ -12,7 +12,6 @@ from PyPDF2 import PdfFileReader
 def uploadBookMain(request):
     result = uploadBook(request)
     if result[0] == True:
-        print("\t\t imagePath = {0}".format(result[1]))
         try: 
             result = uploadBookDataBase(request, result[1], result[2])
         except Exception as err:
@@ -24,7 +23,7 @@ def uploadBookMain(request):
             response['Access-Control-Allow-Origin'] = "*"
             return response
     else:
-        print(result[1])
+        print(result[1].__str__())
         print(result[2])
         response = JsonResponse({ 'result': result[0], 'Error': result[1].__str__(), 'errorMsg': result[2], 'post-operation': 'fail' })
         response['Access-Control-Allow-Origin'] = "*"
@@ -120,7 +119,9 @@ def createImgFolder(mainFolderPath = None):
     else:
         try:
             imgFolderPath = mainFolderPath + "imgs/"
+            editedImgFolderPath = mainFolderPath + "editedImgs/"
             mkdir(imgFolderPath)
+            mkdir(editedImgFolderPath)
             return [True, imgFolderPath]
         except Exception as err:
             return [False, err, "An error has occurred while trying to create the main folder. imgFolderPath: {0}".format(imgFolderPath)]
@@ -214,7 +215,13 @@ def uploadBookDataBase(request, imgPath, pgsNumber):
     try:
         aFile = request.FILES.get('book')
         capa = formatNumber(1, len(str(len(os.listdir(imgPath))))) + ".jpg"
-        book = Book(NAME = aFile.name, SIZE = aFile.size, imgsPATH = imgPath, capaPATH = capa, PAGES = pgsNumber)
+        mainPath = ""
+        path = imgPath.split("/")
+        path.pop()
+        path.pop()
+        for txt in path:
+            mainPath += txt + "/"
+        book = Book(NAME = aFile.name, SIZE = aFile.size, imgsPATH = imgPath, mainPATH = mainPath, capaPATH = capa, PAGES = pgsNumber)
         book.save()
         print("1 - criamos o book no banco de dados with the imagePath = {0} ".format(imgPath))
         imgList = os.listdir(imgPath)
@@ -227,4 +234,5 @@ def uploadBookDataBase(request, imgPath, pgsNumber):
         return [True]
     except Exception as err:
         print("Deu erro")
+        print(err)
         return [False, err, "Deu erro na uploadBookDataBase function"]

@@ -11,10 +11,10 @@ https://docs.djangoproject.com/en/2.1/ref/settings/
 """
 
 import os
+from corsheaders.defaults import default_headers
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/2.1/howto/deployment/checklist/
@@ -27,23 +27,23 @@ DEBUG = True
 
 ALLOWED_HOSTS = []
 
+CORS_ORIGIN_ALLOW_ALL = True
 CORS_ORIGIN_WHITELIST = (
-    'http//:localhost:4200',
-    'http//:localhost:4200/',
-    'http//:localhost:4200/newbook',
-    'http//:localhost:4200/newbook/',
-    'localhost:4200', 
-    'localhost:4200/',
-    'localhost:4200/newbook',
-    'localhost:4200/newbook/', 
+    'localhost:4200',
+    'localhost:8081',
+    '127.0.0.1:8081',
 )
 
 CORS_ALLOW_METHODS = (
-    'POST', 
     'DELETE',
+    'GET',
+    'OPTIONS',
+    'PATCH',
+    'POST',
+    'PUT',
 )
 
-CORS_ALLOW_HEADERS = (
+CORS_ALLOW_HEADERS = default_headers + (
     'accept',
     'accept-encoding',
     'authorization',
@@ -53,16 +53,21 @@ CORS_ALLOW_HEADERS = (
     'user-agent',
     'x-csrftoken',
     'x-requested-with',
+    'Access-Control-Allow-Origin'
 )
 # Application definition
-CORS_ALLOW_ALL = True
+
+CSRF_TRUSTED_ORIGINS = (
+    'http://localhost:8081/canvas',
+    'http://localhost:8081/',
+    'http://localhost:8081',
+    'localhost:8081/canvas',
+    'localhost:8081/',
+    'localhost:8081',
+)
 
 CSRF_COOKIE_SECURE = False
 
-STATIC_URL = '/static/'
-STATICFILES_DIRS = [
-    '/home/rafael/MyLibrary/Angular[_dir_]/imgs/',
-]
 
 INSTALLED_APPS = [
     'bookupload.apps.BookuploadConfig',
@@ -116,14 +121,14 @@ WSGI_APPLICATION = 'canvasAPI.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql_psycopg2',
-        'NAME': 'myowndb',
+        'NAME': 'pdfDB',
         'USER': 'rse',
         'PASSWORD': '24R$&08ubuntu95',
         'HOST': 'localhost',
         'PORT': 5432,
     }
+    
 }
-
 
 # Password validation
 # https://docs.djangoproject.com/en/2.1/ref/settings/#auth-password-validators
@@ -160,5 +165,19 @@ USE_TZ = True
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/2.1/howto/static-files/
+
+
+'''
+STATICFILES_FINDERS = [
+    'django.contrib.staticfiles.finders.FileSystemFinder',
+    'django.contrib.staticfiles.finders.AppDirectoriesFinder',
+]
+'''
+
+static_path = os.path.join(BASE_DIR, "staticDir")
+
+STATICFILES_DIRS = [
+    static_path,
+]
 
 STATIC_URL = '/static/'

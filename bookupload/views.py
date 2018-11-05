@@ -1,11 +1,20 @@
 from django.shortcuts import render
-from django.http import HttpResponse, JsonResponse, HttpResponseRedirect
-from os import mkdir
+from django.http import HttpResponse, JsonResponse
 from pdf2image import convert_from_path
 import os
 from django.views.decorators.csrf import csrf_exempt
 from .models import Book, Object, Page
 from PyPDF2 import PdfFileReader
+
+
+#Global Variables:
+
+_file = None
+_dirName = None
+_dirPath = None
+_pdfPath = None
+_imgsPath = None
+
 
 # Create your views here.
 @csrf_exempt
@@ -29,55 +38,56 @@ def uploadBookMain(request):
         response['Access-Control-Allow-Origin'] = "*"
         return response
 
+
 @csrf_exempt
 def uploadBook(request):
+    global _file, _dirName, _dirPath, _pdfPath, _imgsPath
+    '''
     if request.META['HTTP_REFERER'].find("http://localhost:4200/newbook") == -1:
-        return [False, None, "Http Refere is non-authorized"]
+        return [False, None, "Http Referer is non-authorized"]
+    '''
     if request.method == 'POST':
+        print("0 - request.META.get('HTTP_REFERER') = {0}".format(request.META.get('HTTP_REFERER')))
         print("1 - request method = {0}".format(request.method))
         if request.POST and request.FILES:
             try:
-                aFile = request.FILES.get('book')
-                if aFile == None:
-                    #
+                _file = request.FILES.get('pdfInput')
+                if _file == None:
                     return [False, None, "Couldn't find the book file"]
                 else:
                     print("2 - caught book file")
-                    fileType = aFile.content_type
-                    if fileType.find("pdf") == -1:
-                        return [False, None, "File must be of pdf type"]
+                    fileType = _file.content_type
+                    if fileType.find(".pdf") == -1:
+                        return [False, None, "File must be of pdf type. Try to put '.pdf' at the end of the file."]
                     else:
-                        print("3 - book file is a pdf")
-                        folderName = aFile.name
-                        if folderName.find(".pdf") != -1:
-                            folderName = folderName.replace(".pdf", "[_dir_]")
+                        print("3 - book file is a pdf. it's name is: '{0}'.".format(_file.name))
+                        if request.POST.get("pdfName") != "":
+                            print( "3.1 - received an alternative name to the file: '{0}'.".format( request.POST.get("pdfName") ) )
+                            _dirName = request.POST.get("pdfName")
                         else:
-                            folderName = folderName + "[_dir_]"
+                            _dirName = _file.name.replace(".pdf", "[directory]")
                     try:
-                        print("4 - trying to create the main folder")
-                        result = createMainFolder(folderName)
+                        print("4 - trying to create the main directory")
+                        result = createMainDir()
                         if result[0] == True:
-                            mainFolderPath = result[1]
-                            print("5 - created the main folder: {0}".format(mainFolderPath))
+                            print("5 - created the main folder: {0}".format(_dirPath))
                             print("6 - trying to save the book file")
-                            result = saveFile(mainFolderPath, aFile)
+                            result = saveFile()
                             if result[0] == True:
-                                pdfPath = result[1]
-                                print("7 - saved the file at: {0}".format(pdfPath))
+                                print("7 - saved the file at: {0}".format(_pdfPath))
                                 print("8 - Trying to create the image folder")
-                                result = createImgFolder(mainFolderPath)
+                                result = createImgsDir()
                                 if result[0] == True:
-                                    imgFolderPath = result[1]
-                                    print("9 - created the image folder at: {0}".format(imgFolderPath))
+                                    print("9 - created the image folder at: {0}".format(_imgsPath))
                                     print("10 - trying to convert the pdf file to img files.")
-                                    result = convertPDF(imgFolderPath, pdfPath)
+                                    result = convertPDF2JPG()
                                     if result[0] == True:
-                                        print("11 - we converted the pdf file at {0} in images".format(imgFolderPath))
-                                        f = open(file=pdfPath,mode="rb")
-                                        pdf = PdfFileReader(f)
-                                        pagesNumber = pdf.getNumPages()
-                                        f.close()
-                                        return [True, imgFolderPath, pagesNumber]
+                                        print("11 - we converted the pdf file at {0} in images".format(_imgsPath))
+                                        _file = open(file=_pdfPath,mode="rb")
+                                        _pdf = PdfFileReader(_file)
+                                        _pagesNumber = _pdf.getNumPages()
+                                        _file.close()
+                                        return [True, _imgsPath, _pagesNumber]
                         return result
                     except Exception as err:
                         return [False, err, "An error has occurred at uploadBook function"]
@@ -88,114 +98,99 @@ def uploadBook(request):
     else:
        return [False, None, "This function only accepts POST requests"]
 
-def createMainFolder(folderName = None):
-    if folderName == None or type(folderName) != str:
-        return [False, None, "folderName must be of string type"]
+
+def createMainDir():
+    global _file, _dirName, _dirPath, _pdfPath, _imgsPath
+
+    if _dirName == None or type(_dirName) != str:
+        return [False, None, "_dirName must be of string type"]
     else:
         try:
-            mainFolderPath = "/home/rafael/MyLibrary/{0}/".format(folderName)
-            mkdir(mainFolderPath)
-            return [True, mainFolderPath]
+            _dirPath = "/home/rse/DataBase/Library/{0}/".format(_dirName)
+            os.mkdir(_dirPath)
+            return [True, _dirPath]
         except FileExistsError as err:
             index = 2
             while True:
+
                 try:
-                    path = mainFolderPath.replace("[_dir_]", "[_dir_({0})]".format(index))
+                    _dirPath = _dirPath.replace("[directory]({0})".format(index-1), "[directory({0})]".format(index))
                     index += 1
-                    print("\t\ttrying to create main fold path at: {0}".format(path))
-                    mkdir(path)
-                    mainFolderPath = path
-                    return [True, mainFolderPath]
+                    print("4.{0} - trying to create main fold path at: {1}".format( index-1 , _dirPath ))
+                    os.mkdir( _dirPath )
+                    return [True, _dirPath]
+
                 except FileExistsError as e:
                     pass
+
                 except Exception as e:
-                    return [False, e, "An error has occurred while trying to create the main folder. last path: {0}".format(mainFolderPath)]
-        except Exception as err:
-            return [False, err, "An error has occurred while trying to create the main folder. last mainFolderPath: {0}".format(mainFolderPath)]
+                    return [False, e, "An error has occurred while trying to create the main directory. last path: {0}".format(_dirPath)]
 
-def createImgFolder(mainFolderPath = None):
-    if mainFolderPath == None or type(mainFolderPath) != str:
-        return [False, None, "mainFolderPath must be of string type" ]
+        except Exception as err:
+            return [False, err, "An error has occurred while trying to create the main directory. last _dirPath: {0}".format(_dirPath)]
+
+
+def saveFile():
+    global _file, _dirName, _dirPath, _pdfPath, _imgsPath
+
+    if _dirPath == None or _file == None or type(_dirPath) != str or type(_file.name) != str:
+        return [False, None, "type of _dirName must be a string and _file must be an object"]
     else:
         try:
-            imgFolderPath = mainFolderPath + "imgs/"
-            editedImgFolderPath = mainFolderPath + "editedImgs/"
-            mkdir(imgFolderPath)
-            mkdir(editedImgFolderPath)
-            return [True, imgFolderPath]
-        except Exception as err:
-            return [False, err, "An error has occurred while trying to create the main folder. imgFolderPath: {0}".format(imgFolderPath)]
-
-def saveFile(mainFolderPath = None, aFile = None):
-    if mainFolderPath == None or aFile == None or type(mainFolderPath) != str:
-        return [False, None, "type of folderName must be a string and aFile must be an object"]
-    else:
-        try:
-            pdfPath = mainFolderPath + aFile.name
-            newFile = open(file = pdfPath, mode='wb')
-            data = aFile.read()
+            _pdfPath = _dirPath + _file.name
+            newFile = open(file = _pdfPath, mode='wb')
+            data = _file.read()
             newFile.write(data)
             newFile.close()
-            return [True, pdfPath]
+            return [True]
         except Exception as err:
             return [False, err, "An error has occurred while writing and saving the new book file"]
 
-def convertPDF(imgFolderPath = None, pdfPath = None):
-    if imgFolderPath == None or pdfPath == None or type(imgFolderPath) != str or type(pdfPath) != str:
-        return [False, None, "imgFolderPath and pdfPath must be of type str"]
-    try:
-        inicio = 1
-        fim  = 30
-        while True:
-            print("\t\tstarting to convert pdf file to imgs from {0} to {1}".format(inicio, fim))
-            lista = convert_from_path(pdf_path = pdfPath, output_folder = imgFolderPath, first_page = inicio, last_page = fim, fmt="jpg")
-            if len(lista) == 0:
-                print("finished converting the pdf file")
-                break
-            else:
-                renameImgs(imgFolderPath, inicio, pdfPath)
-                print("\t\tconverted pdf to img from page: {0} to page {1}".format(inicio, fim))
-                inicio = fim + 1
-                fim = inicio + 30
-        return [True,]
-    except Exception as err:
-        errMsg = "An error has occurred while converting a pdf({0}) to images files".format(pdfPath)
-        print(errMsg)
-        return [False, err,  errMsg]
 
-def renameImgs(imgFolderPath = None, inicio = None, pdfPath = None):
-    if imgFolderPath == None or type(imgFolderPath) != str:
-        return [False, None, "imgFolderPath must be of string type"]
+def createImgsDir():
+    global _file, _dirName, _dirPath, _pdfPath, _imgsPath
+
+    if _dirPath == None or type(_dirPath) != str:
+        return [False, None, "_dirPath must be of string type" ]
     else:
         try:
-            index = inicio
-            lista = os.listdir(imgFolderPath)
-            lista.sort()
-            #Nessa parte pegamos a quantidade de elementos da lista, que é um número, transformamos em uma string e pegamos a quantidade de caracteres.
-            length = None
-            try:
-                f = open(file = pdfPath, mode =  "rb")
-                pdf  = PdfFileReader(f)
-                length = pdf.getNumPages()
-            except Exception as err:
-                return [False, err, "Erro while trying to get the number of pages of the pdf file"]
-            if length != None:
-                for img in lista:
-                    if img.find("-") != -1:
-                        arr = img.split("-")
-                        name = None
-                        for prop in arr:
-                            if prop.find(".jpg") != -1:
-                                name = prop
-                        if name != None:
-                            number = name.split(".")[0]
-                            os.rename(src = imgFolderPath + img, dst = imgFolderPath + "{0}.jpg".format(number))
-                        index += 1
-                return [True]
-            else:
-                return [False, None, "length is equal to None"]
+            _imgsPath = _dirPath + "imgs/"
+            _editedImgsPath = _dirPath + "editedImgs/"
+            os.mkdir(_imgsPath)
+            os.mkdir(_editedImgsPath)
+            return [True]
         except Exception as err:
-            return [False, err, "An error has occurred while trying to rename the imgs at {0}".format()]
+            return [False, err, "An error has occurred while trying to create the main folder. _imgsPath: {0}".format(_imgsPath)]
+
+
+
+def convertPDF2JPG():
+    global _file, _dirName, _dirPath, _pdfPath, _imgsPath
+
+    if _imgsPath == None or _pdfPath == None or type(_imgsPath) != str or type(_pdfPath) != str:
+        return [False, None, "_imgsPath and _pdfPath must be of type str"]
+    try:
+        page = 1
+        while True:
+            print( "\t\t10.a.{0} - converting page {0}".format(page) )
+            _imgList = convert_from_path(pdf_path = _pdfPath, output_folder = _imgsPath, first_page = page, last_page = page, fmt="jpg", dpi=1000)
+            if len(_imgList) == 0:
+                print( "10.c - finished converting the pdf file" )
+                break
+            else:
+                _list = _imgList[0].filename.split("-")
+                _number = _list[len(_list) - 1].replace(".jpg", "")
+                _src = _imgList[0].filename
+                _dst = _imgsPath + _dirName + "({0})".format(_number) + ".jpg"
+                os.rename( src = _src, dst = _dst)
+                print( "\t\t10.b.{0} - renamed page {0}}".format(page) )
+                page = page + 1
+        return [True,]
+
+    except Exception as err:
+        errMsg = "10.b - An error has occurred while converting a pdf( '{0}') to images files".format(_pdfPath)
+        print(errMsg)
+        return [False, err,  errMsg]
 
 def formatNumber(number=None, length=None):
     if number == None or length == None or type(number) != int or type(length) != int:
@@ -213,7 +208,7 @@ def formatNumber(number=None, length=None):
 
 def uploadBookDataBase(request, imgPath, pgsNumber):
     try:
-        aFile = request.FILES.get('book')
+        _file = request.FILES.get('book')
         capa = formatNumber(1, len(str(len(os.listdir(imgPath))))) + ".jpg"
         mainPath = ""
         path = imgPath.split("/")
@@ -221,7 +216,7 @@ def uploadBookDataBase(request, imgPath, pgsNumber):
         path.pop()
         for txt in path:
             mainPath += txt + "/"
-        book = Book(NAME = aFile.name, SIZE = aFile.size, imgsPATH = imgPath, mainPATH = mainPath, capaPATH = capa, PAGES = pgsNumber)
+        book = Book(NAME = _file.name, SIZE = _file.size, imgsPATH = imgPath, mainPATH = mainPath, capaPATH = capa, PAGES = pgsNumber)
         book.save()
         print("1 - criamos o book no banco de dados with the imagePath = {0} ".format(imgPath))
         imgList = os.listdir(imgPath)
@@ -233,6 +228,4 @@ def uploadBookDataBase(request, imgPath, pgsNumber):
             print("Salvamos a stack da pagina {0} do livro {1}".format(p.id, book.id))
         return [True]
     except Exception as err:
-        print("Deu erro")
-        print(err)
         return [False, err, "Deu erro na uploadBookDataBase function"]

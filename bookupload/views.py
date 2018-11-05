@@ -1,11 +1,10 @@
 from django.shortcuts import render
 from django.http import HttpResponse, JsonResponse
 from pdf2image import convert_from_path
-import os
 from django.views.decorators.csrf import csrf_exempt
-from .models import Book, Object, Page
+from .models import Book, Page
 from PyPDF2 import PdfFileReader
-
+import os
 
 #Global Variables:
 
@@ -14,7 +13,7 @@ _dirName = None
 _dirPath = None
 _pdfPath = None
 _imgsPath = None
-
+_pagesNumber = None
 
 # Create your views here.
 @csrf_exempt
@@ -41,7 +40,7 @@ def uploadBookMain(request):
 
 @csrf_exempt
 def uploadBook(request):
-    global _file, _dirName, _dirPath, _pdfPath, _imgsPath
+    global _file, _dirName, _dirPath, _pdfPath, _imgsPath, _pagesNumber
     '''
     if request.META['HTTP_REFERER'].find("http://localhost:4200/newbook") == -1:
         return [False, None, "Http Referer is non-authorized"]
@@ -100,7 +99,7 @@ def uploadBook(request):
 
 
 def createMainDir():
-    global _file, _dirName, _dirPath, _pdfPath, _imgsPath
+    global _file, _dirName, _dirPath, _pdfPath, _imgsPath, _pagesNumber
 
     if _dirName == None or type(_dirName) != str:
         return [False, None, "_dirName must be of string type"]
@@ -131,7 +130,7 @@ def createMainDir():
 
 
 def saveFile():
-    global _file, _dirName, _dirPath, _pdfPath, _imgsPath
+    global _file, _dirName, _dirPath, _pdfPath, _imgsPath, _pagesNumber
 
     if _dirPath == None or _file == None or type(_dirPath) != str or type(_file.name) != str:
         return [False, None, "type of _dirName must be a string and _file must be an object"]
@@ -148,7 +147,7 @@ def saveFile():
 
 
 def createImgsDir():
-    global _file, _dirName, _dirPath, _pdfPath, _imgsPath
+    global _file, _dirName, _dirPath, _pdfPath, _imgsPath, _pagesNumber
 
     if _dirPath == None or type(_dirPath) != str:
         return [False, None, "_dirPath must be of string type" ]
@@ -165,7 +164,7 @@ def createImgsDir():
 
 
 def convertPDF2JPG():
-    global _file, _dirName, _dirPath, _pdfPath, _imgsPath
+    global _file, _dirName, _dirPath, _pdfPath, _imgsPath, _pagesNumber
 
     if _imgsPath == None or _pdfPath == None or type(_imgsPath) != str or type(_pdfPath) != str:
         return [False, None, "_imgsPath and _pdfPath must be of type str"]
@@ -192,40 +191,23 @@ def convertPDF2JPG():
         print(errMsg)
         return [False, err,  errMsg]
 
-def formatNumber(number=None, length=None):
-    if number == None or length == None or type(number) != int or type(length) != int:
-        return [False, None, "number an length must be of type int"]
-    if length <= 0:
-        return [False, None, "length must be an integer greater than 0"]
-    else:
-        try:
-            n = str(number)
-            while len(n) < length:
-                n = '0' + n
-            return n
-        except Exception as err:
-            return [False, None, "An error has occurred while formating a number: {0}".format(number)]
+def uploadBookDataBase():
 
-def uploadBookDataBase(request, imgPath, pgsNumber):
+    global _file, _dirName, _dirPath, _pdfPath, _imgsPath, _pagesNumber
+
     try:
-        _file = request.FILES.get('book')
-        capa = formatNumber(1, len(str(len(os.listdir(imgPath))))) + ".jpg"
-        mainPath = ""
-        path = imgPath.split("/")
-        path.pop()
-        path.pop()
-        for txt in path:
-            mainPath += txt + "/"
-        book = Book(NAME = _file.name, SIZE = _file.size, imgsPATH = imgPath, mainPATH = mainPath, capaPATH = capa, PAGES = pgsNumber)
-        book.save()
-        print("1 - criamos o book no banco de dados with the imagePath = {0} ".format(imgPath))
-        imgList = os.listdir(imgPath)
-        for img in imgList: 
-            number = int(img.replace(".jpg", ""))
-            p = Page(BOOK_id = book.id,  NUMERO = number, PAGINA = img) 
+        _book = Book(_name = _dirName + ".pdf" , _imgsPath = _imgsPath, _pages = _pagesNumber, _dirPath = _dirPath )
+        _book.save()
+        print("1 - created a book named '{0}' in the database with images path = {1} ".format(_dirName + ".pdf", _imgsPath ))
+        _imgsList = os.listdir( _imgsPath )
+        _imgsList.sort()
+        _page = 1
+        for img in _imgsList:            
+            p = Page(_book = _book.id,  _page = _page, _filename = img) 
             p.save()
-            print("Salvamos a pagina {0} do livro de id {1}".format(img, book.id))
-            print("Salvamos a stack da pagina {0} do livro {1}".format(p.id, book.id))
+            print("2.{2}  - saved page {0} of the book with id = {1}".format(img, _book.id, _page))
+            _page = _page + 1
         return [True]
+
     except Exception as err:
         return [False, err, "Deu erro na uploadBookDataBase function"]

@@ -1,26 +1,28 @@
 from django.db import models
 
+
 class Book(models.Model):
-    NAME = models.CharField(max_length=500,)
-    SIZE = models.BigIntegerField()
-    imgsPATH = models.FilePathField(blank=True, null=True)
-    capaPATH = models.FilePathField(blank=True, null=True)
-    PAGES = models.BigIntegerField(blank=True, null=True)
-    mainPATH = models.FilePathField(blank=True, null=True)
+    _name = models.CharField(max_length=500,blank=True, null=True)
+    _imgsPath = models.FilePathField(blank=True, null=True)
+    _pages = models.BigIntegerField(blank=True, null=True)
+    _dirPath = models.FilePathField(blank=True, null=True)
     
 class Page(models.Model):
-    BOOK = models.ForeignKey('Book', on_delete=None, blank=True, null=True)
-    NUMERO = models.BigIntegerField()
-    PAGINA = models.CharField(max_length=500, blank = True, null = True)
+    _book = models.ForeignKey('Book', on_delete=None, blank=True, null=True)
+    _page = models.BigIntegerField(blank=True, null=True)
+    _filename = models.CharField(max_length=500,blank=True, null=True)
 
 
-class Object(models.Model):
-    X = models.FloatField()
-    Y = models.FloatField()
-    MODE = models.BooleanField()
-    COLOR = models.CharField(max_length = 500)
-    WIDTH = models.BigIntegerField()
-    SIZE = models.BigIntegerField()
-    BOOK = models.ForeignKey('Book', on_delete=None, blank=True, null=True)
-    PAGE = models.ForeignKey('Page', on_delete=None, blank=True, null=True)
+class Markup(models.Model):
+    _x = models.BigIntegerField(blank=True, null=True)
+    _y = models.BigIntegerField(blank=True, null=True)
+    _sizeX = models.BigIntegerField(blank=True, null=True)
+    _sizeof = models.BigIntegerField(blank=True, null=True)
+    _orgWidth = models.BigIntegerField(blank=True, null=True)
+    _orgHeigth = models.BigIntegerField(blank=True, null=True)
+    _type = models.CharField(max_length=500,blank=True, null=True)
+    _color = models.CharField(max_length=500,blank=True, null=True) 
+    _lineWidth = models.BigIntegerField(blank=True, null=True)
+    _book = models.ForeignKey('Book', on_delete=None, blank=True, null=True)
+    _page = models.ForeignKey('Page', on_delete=None, blank=True, null=True)
 

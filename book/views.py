@@ -1,5 +1,5 @@
 from django.shortcuts import render
-from bookupload.models import Book, Page, Object
+from bookupload.models import Book, Page, Markup
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 import json

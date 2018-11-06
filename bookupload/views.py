@@ -21,9 +21,9 @@ def uploadBookMain(request):
     result = uploadBook(request)
     if result[0] == True:
         try: 
-            result = uploadBookDataBase(request, result[1], result[2])
+            result = uploadBook2DataBase()
         except Exception as err:
-            print("erro na execucao de uploadBookDataBase")
+            print("1 - error at uploadBook2DataBase execution.")
             print(err)
         if result[0] == True:
             print("deu certo")
@@ -56,7 +56,8 @@ def uploadBook(request):
                 else:
                     print("2 - caught book file")
                     fileType = _file.content_type
-                    if fileType.find(".pdf") == -1:
+                    print("2.1 - file's content type: {0}".format(_file.content_type))
+                    if fileType.find("pdf") == -1:
                         return [False, None, "File must be of pdf type. Try to put '.pdf' at the end of the file."]
                     else:
                         print("3 - book file is a pdf. it's name is: '{0}'.".format(_file.name))
@@ -79,13 +80,14 @@ def uploadBook(request):
                                 if result[0] == True:
                                     print("9 - created the image folder at: {0}".format(_imgsPath))
                                     print("10 - trying to convert the pdf file to img files.")
+                                    _file = open(file=_pdfPath,mode="rb")
+                                    _pdf = PdfFileReader(_file)
+                                    _pagesNumber = _pdf.getNumPages()
+                                    _file.close()
                                     result = convertPDF2JPG()
                                     if result[0] == True:
                                         print("11 - we converted the pdf file at {0} in images".format(_imgsPath))
-                                        _file = open(file=_pdfPath,mode="rb")
-                                        _pdf = PdfFileReader(_file)
-                                        _pagesNumber = _pdf.getNumPages()
-                                        _file.close()
+                                        
                                         return [True, _imgsPath, _pagesNumber]
                         return result
                     except Exception as err:
@@ -105,21 +107,24 @@ def createMainDir():
         return [False, None, "_dirName must be of string type"]
     else:
         try:
-            _dirPath = "/home/rse/DataBase/Library/{0}/".format(_dirName)
+            _dirPath = "/home/rafael/DataBase/Library/{0}/".format(_dirName)
             os.mkdir(_dirPath)
             return [True, _dirPath]
+
         except FileExistsError as err:
-            index = 2
+            index = 1
+            
             while True:
 
                 try:
-                    _dirPath = _dirPath.replace("[directory]({0})".format(index-1), "[directory({0})]".format(index))
-                    index += 1
-                    print("4.{0} - trying to create main fold path at: {1}".format( index-1 , _dirPath ))
+                    _dirPath = "/home/rafael/DataBase/Library/{0}/".format(_dirName  + "[directory({0})]".format(index))
+                    print("4.{0} - trying to create main directory at path: {1}".format( index , _dirPath ))
                     os.mkdir( _dirPath )
                     return [True, _dirPath]
 
                 except FileExistsError as e:
+                    index += 1
+                    _dirPath = _dirPath.replace("[directory]({0})".format(index-1), "[directory({0})]".format(index))
                     pass
 
                 except Exception as e:
@@ -168,30 +173,30 @@ def convertPDF2JPG():
 
     if _imgsPath == None or _pdfPath == None or type(_imgsPath) != str or type(_pdfPath) != str:
         return [False, None, "_imgsPath and _pdfPath must be of type str"]
+    
     try:
         page = 1
         while True:
-            print( "\t\t10.a.{0} - converting page {0}".format(page) )
-            _imgList = convert_from_path(pdf_path = _pdfPath, output_folder = _imgsPath, first_page = page, last_page = page, fmt="jpg", dpi=1000)
-            if len(_imgList) == 0:
-                print( "10.c - finished converting the pdf file" )
+            
+            if _pagesNumber < page:
                 break
             else:
+                print( "\t\t10.a.{0} - converting page {0}".format(page) )
+                _imgList = convert_from_path(pdf_path = _pdfPath, output_folder = _imgsPath, first_page = page, last_page = page, fmt="jpg", dpi=600)
                 _list = _imgList[0].filename.split("-")
                 _number = _list[len(_list) - 1].replace(".jpg", "")
                 _src = _imgList[0].filename
                 _dst = _imgsPath + _dirName + "({0})".format(_number) + ".jpg"
-                os.rename( src = _src, dst = _dst)
-                print( "\t\t10.b.{0} - renamed page {0}}".format(page) )
-                page = page + 1
+            os.rename( src = _src, dst = _dst)
+            print( "\t\t\t10.b.{0} - renamed page {0}".format(page) )
+            page = page + 1
         return [True,]
-
     except Exception as err:
-        errMsg = "10.b - An error has occurred while converting a pdf( '{0}') to images files".format(_pdfPath)
+        errMsg = "10.c - An error has occurred while converting a pdf( '{0}' ) to images files".format(_pdfPath)
         print(errMsg)
         return [False, err,  errMsg]
 
-def uploadBookDataBase():
+def uploadBook2DataBase():
 
     global _file, _dirName, _dirPath, _pdfPath, _imgsPath, _pagesNumber
 
@@ -210,4 +215,4 @@ def uploadBookDataBase():
         return [True]
 
     except Exception as err:
-        return [False, err, "Deu erro na uploadBookDataBase function"]
+        return [False, err, "Deu erro na uploadBook2DataBase function"]

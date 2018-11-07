@@ -1,9 +1,11 @@
 from django.shortcuts import render
 from bookupload.models import Book, Page, Markup
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse, HttpResponseRedirect, FileResponse
 from django.views.decorators.csrf import csrf_exempt
 import json
 import base64
+from canvasAPI.settings import STATICFILES_DIRS
+import os
 
 def getbooks(request):
     #if request.META['HTTP_REFERER'].find("http://localhost:4200") != -1:
@@ -27,6 +29,38 @@ def getbooks(request):
     response['Access-Control-Allow-Origin'] = "*"
     return response
 
+def getbooks2(request, darkness):
+    return getbooks(request)
+def getPages2(request, bookId, pageNumber):
+    _book = Book.objects.filter( id = bookId )
+    if len( _book ) == 1:
+        _page = Page.objects.filter ( _book = bookId, _page = pageNumber)
+        if len( _page ) == 1:
+            _path = _book[0]._imgsPath
+            print(_path)
+            _imgList = os.listdir( _path )
+            _imgList.sort()
+            print(_imgList)
+            _file = open( _path + _imgList[pageNumber - 1], 'rb' )
+            print("worked")
+            return FileResponse( _file )
+    return HttpResponse("Sorry")
+
+
+def getPages(request, bookId, pageNumber):
+    _book = Book.objects.filter( id = bookId )
+    if len( _book ) == 1:
+        _page = Page.objects.filter ( _book = bookId, _page = pageNumber)
+        if len( _page ) == 1:
+            _path = _book[0]._imgsPath
+            STATICFILES_DIRS.append( _path )
+            print("path: {0}".format( _path ) )
+            _imgFile = _book[0]._name.replace(".pdf", "({0}).jpg".format(_page[0]._page))
+            response = JsonResponse( { 'host': "http://localhost:8000/static/" + _imgFile, })
+            response['Access-Control-Allow-Origin'] = "*"
+            return response
+        
+
 @csrf_exempt
 def setStack(request):
     if request.method == "POST":
@@ -42,7 +76,7 @@ def setStack(request):
             path = book.mainPATH + "editedImgs/"
             f = open(file=path + img.replace(".jpg", ".png"), mode="wb")
             IMG = request.POST['image'].encode()
-            f.write(base64.decodebytes(IMG))
+            f.write( base64.decodebytes(IMG) )
             f.close()
             print("Saved the {0} img at {1} path".format(img,path))
         print("image: ", img, "BOOK_id: ", book_id)

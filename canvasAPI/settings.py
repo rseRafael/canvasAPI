@@ -174,10 +174,10 @@ STATICFILES_FINDERS = [
 ]
 '''
 
-static_path = os.path.join(BASE_DIR, "staticDir")
+
 
 STATICFILES_DIRS = [
-    static_path,
+    '/home/rafael/DataBase/Library/Espiritísmo Cristão[directory(4)]/imgs/'
 ]
 
 STATIC_URL = '/static/'

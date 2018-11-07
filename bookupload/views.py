@@ -21,13 +21,20 @@ def uploadBookMain(request):
     result = uploadBook(request)
     if result[0] == True:
         try: 
+            print("1 - Starting to upload book informations to the database.")
             result = uploadBook2DataBase()
         except Exception as err:
-            print("1 - error at uploadBook2DataBase execution.")
+            print("1.c.2 - error at uploadBook2DataBase execution.")
             print(err)
         if result[0] == True:
-            print("deu certo")
+            print("2 - Successfully uploaded book informations.")
             response = JsonResponse({'result': True, 'post-operation': "success"})
+            response['Access-Control-Allow-Origin'] = "*"
+            return response
+        else:
+            print(result[1].__str__())
+            print(result[2])
+            response = JsonResponse({ 'result': result[0], 'Error': result[1].__str__(), 'errorMsg': result[2], 'POST-operation': 'failed' })
             response['Access-Control-Allow-Origin'] = "*"
             return response
     else:
@@ -87,7 +94,6 @@ def uploadBook(request):
                                     result = convertPDF2JPG()
                                     if result[0] == True:
                                         print("11 - we converted the pdf file at {0} in images".format(_imgsPath))
-                                        
                                         return [True, _imgsPath, _pagesNumber]
                         return result
                     except Exception as err:
@@ -201,18 +207,21 @@ def uploadBook2DataBase():
     global _file, _dirName, _dirPath, _pdfPath, _imgsPath, _pagesNumber
 
     try:
+        print("1.a.1 = About to create a book in the database.")
         _book = Book(_name = _dirName + ".pdf" , _imgsPath = _imgsPath, _pages = _pagesNumber, _dirPath = _dirPath )
         _book.save()
-        print("1 - created a book named '{0}' in the database with images path = {1} ".format(_dirName + ".pdf", _imgsPath ))
+        print("1.a.2 - created a book named '{0}' in the database with images path = {1} ".format(_dirName + ".pdf", _imgsPath ))
         _imgsList = os.listdir( _imgsPath )
         _imgsList.sort()
         _page = 1
         for img in _imgsList:            
-            p = Page(_book = _book.id,  _page = _page, _filename = img) 
+            p = Page(_book = _book,  _page = _page, _filename = img) 
             p.save()
-            print("2.{2}  - saved page {0} of the book with id = {1}".format(img, _book.id, _page))
+            print("1.b.{2}  - saved page {0} of the book with id = {1}".format(img, _book.id, _page))
             _page = _page + 1
         return [True]
 
     except Exception as err:
-        return [False, err, "Deu erro na uploadBook2DataBase function"]
+        print("1.c.1 - error at uploadBook2DataBase execution.")
+        print(err)
+        return [False, err, "An error has occurred at uploadBook2DataBase function."]

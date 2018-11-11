@@ -20,5 +20,6 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('book/', include("bookupload.urls")),
     path('books/', include('book.urls')),
-    path("test/", views.test)
+    path("test/", views.test),
+
 ]

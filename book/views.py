@@ -6,6 +6,9 @@ import json
 import base64
 from canvasAPI.settings import STATICFILES_DIRS
 import os
+import json
+
+response = None
 
 def getbooks(request):
     #if request.META['HTTP_REFERER'].find("http://localhost:4200") != -1:
@@ -29,28 +32,86 @@ def getbooks(request):
     response['Access-Control-Allow-Origin'] = "*"
     return response
 
+@csrf_exempt
+def sendbook(bookId, pageNumber):
+    _book = Book.objects.filter(id=bookId)
+    if len(_book) == 1:
+        imgsList = os.listdir(_book._imgsPath)
+        imgsList.sort()
+        if pageNumber > 0 and pageNumber <= len(imgsList):
+            img = open(_book._imgsPath + imgsList[pageNumber-1], 'rb')
+            print(type(img))
+            _json = dict() #could be {}
+            _json['image'] = img
+            _json['result'] = True
+            _jsonResponse = JsonResponse(_json)
+            _jsonResponse['Allow-Access-Control-Origin'] = "*"
+            return _jsonResponse
+    _json = {}
+    _json['result'] = False
+    _jsonResponse = JsonResponse(_json)
+    return _jsonResponse
+
+
 def getbooks2(request, darkness):
     return getbooks(request)
+
+@csrf_exempt
 def getPages2(request, bookId, pageNumber):
-    _book = Book.objects.filter( id = bookId )
-    if len( _book ) == 1:
-        _page = Page.objects.filter ( _book = bookId, _page = pageNumber)
-        if len( _page ) == 1:
+    global response
+    _book = Book.objects.filter(id=bookId)
+    if len(_book) == 1:
+        _page = Page.objects.filter(_book=bookId, _page=pageNumber)
+        if len(_page) == 1:
             _path = _book[0]._imgsPath
             print(_path)
             _imgList = os.listdir( _path )
             _imgList.sort()
             print(_imgList)
-            _file = open( _path + _imgList[pageNumber - 1], 'rb' )
+            _file = open( _path + _imgList[pageNumber - 1], 'rb')
             print("worked")
-            return FileResponse( _file )
-    return HttpResponse("Sorry")
+            response = FileResponse(_file)
+            return response
+        else:
+            response = HttpResponse("Sorry, mate. There is no pages in this book.")
+    else:
+        response = HttpResponse("Sorry, mate. There is no book with this id.")
+    response['Access-Control-Allow-Origin'] = "*"
+    return response
 
+#@Produces()
+#@Consumes()
+@csrf_exempt
+def receiveMarkups(request):
+    if request.method == 'POST':
+        if len(request.POST) >= 1:
+            try:
+                for prop in request.POST:
+                    print(prop)
+                book_id = request.POST["book_id"]
+                page_number = request.POST['page_number']
+                markups = json.loads(request.POST['markups'])
+                # print(book_id)
+                # print(page_number)
+                # print(markups)
+            except Exception as err:
+                print("an exception has occured")
+                print(err)
+                print("- - - - - - ")
+    _json = {}
+    _json['result'] = True
+    _json['prettyMessage'] = "Hello, stranger. I know you are a nice person but you are not me. I am the back-end and so more important than you."
+    jsonResponse = JsonResponse(_json)
+    jsonResponse['Access-Control-Allow-Origin'] = "*"
+    return jsonResponse
+
+def setMarkups(book_id):
+    pass
 
 def getPages(request, bookId, pageNumber):
-    _book = Book.objects.filter( id = bookId )
+    _book = Book.objects.filter(id=bookId)
     if len( _book ) == 1:
-        _page = Page.objects.filter ( _book = bookId, _page = pageNumber)
+        _page = Page.objects.filter(_book=bookId, _page=pageNumber)
         if len( _page ) == 1:
             _path = _book[0]._imgsPath
             STATICFILES_DIRS.append( _path )

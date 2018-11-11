@@ -122,8 +122,8 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql_psycopg2',
         'NAME': 'pdfDB',
-        'USER': 'rse',
-        'PASSWORD': '24R$&08ubuntu95',
+        'USER': 'rse_sql',
+        'PASSWORD': 'rse08ubuntu95',
         'HOST': 'localhost',
         'PORT': 5432,
     }
@@ -175,9 +175,10 @@ STATICFILES_FINDERS = [
 '''
 
 
-
+print("BASE_DIR: {0}".format(BASE_DIR))
 STATICFILES_DIRS = [
-    '/home/rafael/DataBase/Library/Espiritísmo Cristão[directory(4)]/imgs/'
+    '/home/rafael/DataBase/Library/Espiritísmo Cristão[directory(4)]/imgs/',
+    BASE_DIR + "/staticDir/",
 ]
 
 STATIC_URL = '/static/'

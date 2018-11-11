@@ -113,7 +113,7 @@ def createMainDir():
         return [False, None, "_dirName must be of string type"]
     else:
         try:
-            _dirPath = "/home/rafael/DataBase/Library/{0}/".format(_dirName)
+            _dirPath = "/home/rse/DataBase/Library/{0}/".format(_dirName)
             os.mkdir(_dirPath)
             return [True, _dirPath]
 

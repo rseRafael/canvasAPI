@@ -175,7 +175,7 @@ STATICFILES_FINDERS = [
 '''
 
 
-print("BASE_DIR: {0}".format(BASE_DIR))
+# print("BASE_DIR: {0}".format(BASE_DIR))
 STATICFILES_DIRS = [
     '/home/rafael/DataBase/Library/Espiritísmo Cristão[directory(4)]/imgs/',
     BASE_DIR + "/staticDir/",

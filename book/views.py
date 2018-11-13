@@ -11,13 +11,8 @@ import json
 response = None
 
 
-def getbooks(request):
-    # if request.META['HTTP_REFERER'].find("http://localhost:4200") != -1:
-    try:
-        print(request.META['HTTP_REFERER'])
-    except Exception as err:
-        print("Erro: ")
-        print(err)
+@csrf_exempt
+def getBooks(request):
     if True:
         if request.method == "GET":
             if Book.objects.exists() == True:
@@ -34,45 +29,39 @@ def getbooks(request):
     return response
 
 
-# @csrf_exempt
-# def sendpage(request, bookId, pageNumber):
-#     _book = Book.objects.filter(id=bookId)
-#     if len(_book) == 1:
-#         imgsList = os.listdir(_book._imgsPath)
-#         imgsList.sort()
-#         if pageNumber > 0 and pageNumber <= len(imgsList):
-#             img = open(_book._imgsPath + imgsList[pageNumber - 1], 'rb')
-#             print(type(img))
-#             _json = dict()  # could be {}
-#             _json['image'] = img
-#             _json['result'] = True
-#             _jsonResponse = JsonResponse(_json)
-#             _jsonResponse['Allow-Access-Control-Origin'] = "*"
-#             return _jsonResponse
-#     _json = {}
-#     _json['result'] = False
-#     _jsonResponse = JsonResponse(_json)
-#     return _jsonResponse
-
-
-def getbooks2(request, darkness):
-    return getbooks(request)
+@csrf_exempt
+def getMarkups(request, bookId, page):
+    book = Book.objects.filter(id=bookId)
+    if len(book) == 1:
+        book = book[0]
+        if page > 0 and page <= book._pages:
+            markups = Markup.objects.filter(_book=book._id, _page=page)
+            index = 1
+            name = "markup"
+            markupsJson = {}
+            for markup in markups:
+                markupsJson[name + index] = turnMarkupIntoDict(markup)
+                index += 1
+            jsonResponse = JsonResponse(markupsJson)
+            jsonResponse['Access-Control-Allow-Origin'] = "*"
+            return jsonResponse
+    failureJson = {'result': False}
+    jsonResponse = JsonResponse(failureJson)
+    jsonResponse['Access-Control-Allow-Origin'] = "*"
+    return jsonResponse
 
 
 @csrf_exempt
-def sendpage(request, bookId, pageNumber):
+def getPage(request, bookId, pageNumber):
     global response
     _book = Book.objects.filter(id=bookId)
     if len(_book) == 1:
         _page = Page.objects.filter(_book=bookId, _page=pageNumber)
         if len(_page) == 1:
             _path = _book[0]._imgsPath
-            print(_path)
             _imgList = os.listdir(_path)
             _imgList.sort()
-            print(_imgList)
             _file = open(_path + _imgList[pageNumber - 1], 'rb')
-            print("worked")
             response = FileResponse(_file)
             return response
         else:
@@ -83,33 +72,59 @@ def sendpage(request, bookId, pageNumber):
     return response
 
 
-# @Produces()
-# @Consumes()
+def turnMarkupIntoDict(markup):
+    jsonDict = {}
+    jsonDict["_x"] = markup._x
+    jsonDict["_y"] = markup._y
+    jsonDict["_sizeX"] = markup._sizeX
+    jsonDict["_sizeY"] = markup._sizeY
+    jsonDict["_orgWidth"] = markup._orgWidth
+    jsonDict["_orgHeight"] = markup._orgHeight
+    jsonDict["_type"] = markup._type
+    jsonDict["_color"] = markup._color
+    jsonDict["_lineWidth"] = markup._lineWidth
+    return jsonDict
+
+
 @csrf_exempt
-def receiveMarkups(request):
+def setMarkups(request):
+    print(request.method)
     if request.method == 'POST':
+        print(len(request.POST))
         if len(request.POST) >= 1:
             try:
-                for prop in request.POST:
-                    print(prop)
-                book_id = request.POST["book_id"]
-                page_number = request.POST['page_number']
+                bookId = request.POST["bookId"]
+                page = request.POST['page']
                 markups = json.loads(request.POST['markups'])
-                # print(book_id)
-                # print(page_number)
-                # print(markups)
+                deleteMarkups(bookId, page)
+                for markup in markups:
+                    markup = markups[markup]
+                    markupObj = Markup(_x=markup["x"],
+                                       _y=markup["y"],
+                                       _sizeX=markup["sizeX"],
+                                       _sizeY=markup["sizeY"],
+                                       _orgWidth=markup["orgWidth"],
+                                       _orgHeight=markup["orgHeight"],
+                                       _type=markup["type"],
+                                       _color=markup["color"],
+                                       _lineWidth=markup["lineWidth"],)
+                    markupObj.save()
             except Exception as err:
-                print("an exception has occured")
+                print("an exception has occured at setMarkups method.")
                 print(err)
                 print("- - - - - - ")
     _json = {}
-    _json['result'] = True
+    _json['result'] = False
     _json[
         'prettyMessage'] = "Hello, stranger. I know you are a nice person but you are not me. I am the back-end and so more important than you."
     jsonResponse = JsonResponse(_json)
     jsonResponse['Access-Control-Allow-Origin'] = "*"
     return jsonResponse
 
+def deleteMarkups(bookId, page):
+    markups = Markup.objects.filter(_page=page, _book=bookId)
+    for markup in markups:
+        markup.delete()
 
 
 def getwholebook(request, bookId):
@@ -150,7 +165,7 @@ def getloadedbooks(request):
         return jsonResponse
     aJson = {'result': False, 'method-required': request.method}
     jsonResponse = JsonResponse(aJson)
-    jsonResponse['Access-Control-Allow-Origin']= "*"
+    jsonResponse['Access-Control-Allow-Origin'] = "*"
     return jsonResponse
 
 

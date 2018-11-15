@@ -29,30 +29,30 @@ def getBooks(request):
     return response
 
 
-@csrf_exempt
-def getMarkups(request, bookId, page):
-    book = Book.objects.filter(id=bookId)
-    if len(book) == 1:
-        book = book[0]
-        if page > 0 and page <= book._pages:
-            markups = Markup.objects.filter(_book=book.id, _page=page)
-            index = 1
-            name = "markup"
-            markupsJson = {}
-            for markup in markups:
-                markupsJson[name + str(index)] = turnMarkupIntoDict(markup)
-                index += 1
-            jsonResponse = JsonResponse(markupsJson)
-            jsonResponse['Access-Control-Allow-Origin'] = "*"
-            return jsonResponse
-    failureJson = {'result': False}
-    jsonResponse = JsonResponse(failureJson)
-    jsonResponse['Access-Control-Allow-Origin'] = "*"
-    return jsonResponse
+# @csrf_exempt
+# def getMarkups2(request, bookId, page):
+#     book = Book.objects.filter(id=bookId)
+#     if len(book) == 1:
+#         book = book[0]
+#         if page > 0 and page <= book._pages:
+#             markups = Markup.objects.filter(_book=book.id, _page=page)
+#             index = 1
+#             name = "markup"
+#             markupsJson = {}
+#             for markup in markups:
+#                 markupsJson[name + str(index)] = turnMarkupIntoDict(markup)
+#                 index += 1
+#             jsonResponse = JsonResponse(markupsJson)
+#             jsonResponse['Access-Control-Allow-Origin'] = "*"
+#             return jsonResponse
+#     failureJson = {'result': False}
+#     jsonResponse = JsonResponse(failureJson)
+#     jsonResponse['Access-Control-Allow-Origin'] = "*"
+#     return jsonResponse
 
 
 @csrf_exempt
-def getMarkups2(request, bookId, pageNumber):
+def getMarkups(request, bookId, pageNumber):
     if request.method == "GET":
         if validateGetMarkupsParam(bookId, pageNumber):
             book = Book.objects.filter(id=bookId)
